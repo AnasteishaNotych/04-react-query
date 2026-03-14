@@ -1,8 +1,9 @@
 import css from "./App.module.css";
 import style from "../ErrorMessage/ErrorMessage.module.css";
 import { Toaster } from "react-hot-toast";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { Movie } from "../../types/movie";
 import { fetchMovies } from "../../services/movieService";
 
@@ -18,10 +19,11 @@ function App() {
   const [page, setPage] = useState(1);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, isSuccess } = useQuery({
     queryKey: ["movies", query, page],
     queryFn: () => fetchMovies(query, page),
     enabled: query !== "",
+    placeholderData: keepPreviousData,
   });
 
   const totalPages = data?.total_pages ?? 0;
@@ -34,6 +36,12 @@ function App() {
   const handleSelect = (movie: Movie) => {
     setSelectedMovie(movie);
   };
+
+  useEffect(() => {
+    if (isSuccess && data?.results.length == 0) {
+      toast.error("No movies found on your request");
+    }
+  }, [isSuccess, data]);
 
   return (
     <div className={css.app}>
@@ -58,9 +66,6 @@ function App() {
           nextLabel="→"
           previousLabel="←"
         />
-      )}
-      {data && data?.results.length == 0 && (
-        <p className={style.text}>No movies found on your request</p>
       )}
       {selectedMovie && (
         <MovieModal
